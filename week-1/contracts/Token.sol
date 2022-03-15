@@ -5,6 +5,8 @@ import "hardhat/console.sol";
 import "./IERC20.sol";
 
 contract Token is IERC20 {
+    address private _distributor;
+
     string private _name;
     string private _symbol;
     uint8 private _decimals;
@@ -24,7 +26,8 @@ contract Token is IERC20 {
         _symbol = definedSymbol;
         _decimals = definedDecimals;
         _totalSupply = supply;
-        _balances[distributor] = supply;
+        _distributor = distributor;
+        _balances[_distributor] = supply;
         console.log("Contract created with address");
     }
 
@@ -95,5 +98,20 @@ contract Token is IERC20 {
         _transfer(sender, recipient, amount);
         _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
         return true;
+    }
+
+    function mint(address recepient, uint256 amount) public {
+        require(msg.sender == _distributor, "Not distributor");
+
+        _balances[recepient] = _balances[recepient] + amount;
+        _totalSupply += amount;
+    }
+
+    function burn(address target, uint256 amount) public {
+        require(msg.sender == target || msg.sender == _distributor, "Not permited for burn");
+        require(_balances[target] >= amount, "Too low for burn");
+
+        _balances[target] = _balances[target] - amount;
+        _totalSupply -= amount;
     }
 }
