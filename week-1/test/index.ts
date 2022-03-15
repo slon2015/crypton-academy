@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable no-unused-expressions */
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { Token } from "../typechain";
@@ -17,9 +19,12 @@ async function getToken(): Promise<Token> {
 }
 
 describe("Token", function () {
-    it("Should contains metadata", async function () {
-        const token = await getToken();
+    let token: Token;
+    this.beforeEach(async function () {
+        token = await getToken();
+    });
 
+    it("Should contains metadata", async function () {
         expect(await token.name()).to.equal("CryptoRuble");
         expect(await token.symbol()).to.equal("cRUB");
         expect(await token.decimals()).to.equal(2);
@@ -28,7 +33,6 @@ describe("Token", function () {
 
     it("Should transfer tokens", async function () {
         const [distributor, recepient] = await ethers.getSigners();
-        const token = await getToken();
 
         const tx = await token
             .connect(distributor)
@@ -43,7 +47,6 @@ describe("Token", function () {
 
     it("Should approves tokens", async function () {
         const [distributor, recepient] = await ethers.getSigners();
-        const token = await getToken();
 
         const tx = await token
             .connect(distributor)
@@ -60,7 +63,6 @@ describe("Token", function () {
 
     it("Should transfer approved tokens", async function () {
         const [distributor, recepient, thirdParty] = await ethers.getSigners();
-        const token = await getToken();
 
         let tx = await token
             .connect(distributor)
@@ -83,7 +85,6 @@ describe("Token", function () {
 
     it("Should mint tokens", async function () {
         const [distributor, recepient] = await ethers.getSigners();
-        const token = await getToken();
 
         const oldTotalSupply = await token.totalSupply();
 
@@ -101,7 +102,6 @@ describe("Token", function () {
 
     it("Should burn tokens", async function () {
         const [distributor, recepient] = await ethers.getSigners();
-        const token = await getToken();
 
         const oldTotalSupply = await token.totalSupply();
 
@@ -122,7 +122,6 @@ describe("Token", function () {
 
     it("Should not transfer tokens from invalid address", async function () {
         const [distributor] = await ethers.getSigners();
-        const token = await getToken();
 
         expect(
             token
@@ -133,7 +132,6 @@ describe("Token", function () {
 
     it("Should not transfer more tokens than have", async function () {
         const [distributor, recepient] = await ethers.getSigners();
-        const token = await getToken();
 
         const tokensForTransfer = (
             await token.balanceOf(distributor.address)
@@ -148,7 +146,6 @@ describe("Token", function () {
 
     it("Should not approve tokens for invalid address", async function () {
         const [distributor] = await ethers.getSigners();
-        const token = await getToken();
 
         expect(
             token
@@ -159,7 +156,6 @@ describe("Token", function () {
 
     it("Should not transfer more tokens than approved", async function () {
         const [distributor, recepient, thirdParty] = await ethers.getSigners();
-        const token = await getToken();
 
         const tx = await token
             .connect(distributor)
@@ -175,7 +171,6 @@ describe("Token", function () {
 
     it("Should not transfer tokens from invalid address", async function () {
         const [distributor, recepient, thirdParty] = await ethers.getSigners();
-        const token = await getToken();
 
         const tx = await token
             .connect(distributor)
@@ -195,7 +190,6 @@ describe("Token", function () {
 
     it("Should not transfer tokens to invalid address", async function () {
         const [distributor, recepient] = await ethers.getSigners();
-        const token = await getToken();
 
         const tx = await token
             .connect(distributor)
@@ -215,7 +209,6 @@ describe("Token", function () {
 
     it("Should not mint tokens for non distributor request", async function () {
         const [_, recepient] = await ethers.getSigners();
-        const token = await getToken();
 
         expect(
             token.connect(recepient).mint(recepient.address, 100)
@@ -224,7 +217,6 @@ describe("Token", function () {
 
     it("Should not burn tokens for not authorized request", async function () {
         const [distributor, recepient, thirdParty] = await ethers.getSigners();
-        const token = await getToken();
 
         const tx = await token
             .connect(distributor)
@@ -238,7 +230,6 @@ describe("Token", function () {
 
     it("Should not burn more tokens than have", async function () {
         const [distributor, recepient] = await ethers.getSigners();
-        const token = await getToken();
 
         const tx = await token
             .connect(distributor)

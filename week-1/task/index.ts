@@ -14,29 +14,6 @@ async function selectSigner(
     return sender;
 }
 
-task("deploy", "Deploy token in network")
-    .addParam("name", "Name of token", "CryptoRuble")
-    .addParam("symbol", "Symbol of token", "cRUB")
-    .addParam("decimals", "Decimals of token", "2")
-    .addParam("supply", "Total supply for distribution")
-    .setAction(async (args, hre) => {
-        const [sender] = await hre.ethers.getSigners();
-        const Token = await hre.ethers.getContractFactory("Token");
-        const token = await Token.deploy(
-            args.name,
-            args.symbol,
-            Number.parseInt(args.decimals),
-            sender.address,
-            Number.parseInt(args.supply)
-        );
-
-        await token.deployed();
-
-        console.log(
-            "Token deployed into network with address: " + token.address
-        );
-    });
-
 interface ViewArg {
     name: string;
     description: string;
