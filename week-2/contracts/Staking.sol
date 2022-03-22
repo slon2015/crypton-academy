@@ -14,6 +14,7 @@ contract Staking is AccessControl {
         uint256 stakedTimestamp;
         uint256 amount;
         uint256 lastClaimed;
+        uint256 collectedRewardAmount;
     }
 
     struct Terms {
@@ -59,25 +60,20 @@ contract Staking is AccessControl {
     function stake(uint256 amountToStake) external {
         require(amountToStake > 0, "Amount must be highter than 0");
         StakingAccount storage account = _accounts[_msgSender()];
+
+        account.collectedRewardAmount += _calculateReward(account);
+
         account.stakedTimestamp = block.timestamp;
-        if (account.amount > 0) {
-            _claim();
-        } else {
-            account.lastClaimed = account.stakedTimestamp;
-        }
+        account.lastClaimed = account.stakedTimestamp;
+
         account.amount += amountToStake;
         terms.tokenToSatking.safeTransferFrom(_msgSender(), address(this), amountToStake);
-
-        _accounts[_msgSender()] = account;
     }
 
-    function _calculateReward(uint256 amount, uint ticks) internal view returns (uint256) {
-        uint256 rewardAmount = amount;
-        for (uint256 tick = 0; tick < ticks; tick++) {
-            uint256 koef = terms.rewardPercent + 100;
-            rewardAmount = (rewardAmount * koef / 100);
-        }
-        return rewardAmount - amount;
+    function _calculateReward(StakingAccount storage account) internal view returns (uint256) {
+        return (account.amount * 
+            ((block.timestamp - account.lastClaimed) / terms.tick) * 
+            terms.rewardPercent) / 100.0 + account.collectedRewardAmount;
     }
 
     function getStakedAmount() external view returns(uint256) {
@@ -87,19 +83,15 @@ contract Staking is AccessControl {
 
     function getClaimableAmount() public view returns(uint256) {
         StakingAccount storage account = _accounts[_msgSender()];
-        uint ticks = (block.timestamp - account.lastClaimed) / terms.tick;
-        uint256 tokensToClaim = _calculateReward(account.amount, ticks);
-        return tokensToClaim;
+        return _calculateReward(account);
     }
 
     function _claim() internal {
         StakingAccount storage account = _accounts[_msgSender()];
-        uint ticks = (block.timestamp - account.lastClaimed) / terms.tick;
-        uint256 tokensToClaim = _calculateReward(account.amount, ticks);
-        terms.rewardToken.safeTransferFrom(terms.treasury, _msgSender(), tokensToClaim);
-
+        uint256 tokensToClaim = _calculateReward(account);
         account.lastClaimed = block.timestamp;
-        _accounts[_msgSender()] = account;
+
+        terms.rewardToken.safeTransferFrom(terms.treasury, _msgSender(), tokensToClaim);
     }
 
     function claim() external {

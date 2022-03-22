@@ -1,13 +1,12 @@
-import { ADDRESS_ZERO } from "@uniswap/v3-sdk";
 import * as hre from "hardhat";
 import { ethers } from "hardhat";
 import { Token } from "../typechain";
+import { FACTORY_ADDRESS } from "@uniswap/sdk";
+import IUniswapV2Factory from "@uniswap/v2-core/build/IUniswapV2Factory.json";
+import { ContractReceipt, ContractTransaction } from "ethers";
 
 async function deployToken(name: string, symbol: string): Promise<Token> {
-    const [deployer] = await hre.ethers.getSigners();
     const args: [number, string, string] = [100000000, name, symbol];
-
-    console.log("Deploying contracts with the account:", deployer.address);
 
     const tokenFactory = await hre.ethers.getContractFactory("Token");
     return tokenFactory.deploy(...args);
@@ -16,19 +15,38 @@ async function deployToken(name: string, symbol: string): Promise<Token> {
 async function main(): Promise<void> {
     const [deployer] = await hre.ethers.getSigners();
 
+    const PairFactory = new ethers.Contract(
+        FACTORY_ADDRESS,
+        IUniswapV2Factory.abi,
+        deployer
+    ) as any;
+
     const tokenA = await deployToken("TokenA", "TOKa");
     const tokenB = await deployToken("TokenB", "TOKb");
     const reward = await deployToken("RewardToken", "RWD");
 
-    await Promise.all([tokenA.deployed(), tokenB.deployed()]);
+    await Promise.all([
+        tokenA.deployed(),
+        tokenB.deployed(),
+        reward.deployed(),
+    ]);
 
-    console.log(`Tokea A deployed with address ${tokenA.address}`);
-    console.log(`Tokea B deployed with address ${tokenB.address}`);
+    console.log(`Token A deployed with address ${tokenA.address}`);
+    console.log(`Token B deployed with address ${tokenB.address}`);
+
+    const createPair: ContractTransaction = await PairFactory.createPair(
+        tokenA.address,
+        tokenB.address
+    );
+    const pairReceipt: ContractReceipt = await createPair.wait();
+
+    const pairAddress: string = pairReceipt.events!![0].args!![2];
+    console.log(`Pair deployed with address ${pairAddress}`);
 
     const StakingFactory = await ethers.getContractFactory("Staking");
 
     const stakingArgs: [string, string, number, number, string, number] = [
-        tokenA.address,
+        pairAddress,
         reward.address,
         60,
         1,

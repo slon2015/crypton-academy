@@ -24,7 +24,7 @@ const config: HardhatUserConfig = {
                 mempool: {
                     order: "fifo",
                 },
-                auto: false,
+                auto: true,
             },
         },
         rinkeby: {

@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-unused-expressions */
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ADDRESS_ZERO } from "@uniswap/v3-sdk";
 import { expect } from "chai";
 import { ethers } from "hardhat";
@@ -10,10 +11,11 @@ describe("Staking", function () {
     let targetToken: Token;
     let rewardToken: Token;
     let staking: Staking;
+    let accounts: SignerWithAddress[];
     const freezePeriod = 60 * 60 * 10;
 
     this.beforeEach(async function () {
-        const [deployer] = await ethers.getSigners();
+        accounts = await ethers.getSigners();
         targetToken = await getToken("Target", "TGT");
         rewardToken = await getToken("Reward", "RWD");
         const StakingFactory = await ethers.getContractFactory("Staking");
@@ -22,7 +24,7 @@ describe("Staking", function () {
             rewardToken.address,
             10,
             1,
-            deployer.address,
+            accounts[0].address,
             freezePeriod
         );
 
@@ -42,7 +44,7 @@ describe("Staking", function () {
     });
 
     it("Should stake non zero amounts", async () => {
-        const [_, user] = await ethers.getSigners();
+        const [_, user] = accounts;
         const transfer = await targetToken.transfer(user.address, 1000);
 
         const approve = await targetToken
@@ -58,7 +60,7 @@ describe("Staking", function () {
     });
 
     it("Should increase stake amount with claim", async () => {
-        const [_, user] = await ethers.getSigners();
+        const [_, user] = accounts;
 
         const transfer = await targetToken.transfer(user.address, 2000);
 
@@ -74,9 +76,10 @@ describe("Staking", function () {
 
         stake = await staking.connect(user).stake(1000);
 
-        await mine(stake);
+        await stake.wait();
 
-        expect(await rewardToken.balanceOf(user.address)).to.equal(10);
+        expect(await rewardToken.balanceOf(user.address)).to.equal(0);
+        expect(await staking.connect(user).getClaimableAmount()).to.equal(10);
     });
 
     it("Should not stake zero amounts", async () => {
@@ -104,7 +107,7 @@ describe("Staking", function () {
     });
 
     it("Should claim reward with subsequent staking", async () => {
-        const [_, user] = await ethers.getSigners();
+        const [_, user] = accounts;
 
         const transfer = await targetToken.transfer(user.address, 2000);
 
@@ -125,7 +128,7 @@ describe("Staking", function () {
     });
 
     it("Should not claim with zero claimable reward", async () => {
-        const [_, user] = await ethers.getSigners();
+        const [_, user] = accounts;
 
         const transfer = await targetToken.transfer(user.address, 2000);
 
@@ -143,7 +146,7 @@ describe("Staking", function () {
     });
 
     it("Should not unstake tokens early than freeze period ends", async () => {
-        const [_, user] = await ethers.getSigners();
+        const [_, user] = accounts;
 
         const transfer = await targetToken.transfer(user.address, 2000);
 
@@ -161,7 +164,7 @@ describe("Staking", function () {
     });
 
     it("Should unstake tokens with zero claimable reward", async () => {
-        const [_, user] = await ethers.getSigners();
+        const [_, user] = accounts;
 
         const transfer = await targetToken.transfer(user.address, 1000);
 
@@ -193,7 +196,7 @@ describe("Staking", function () {
     });
 
     it("Should unstake tokens with non zero claimable reward", async () => {
-        const [_, user] = await ethers.getSigners();
+        const [_, user] = accounts;
 
         const transfer = await targetToken.transfer(user.address, 2000);
 
@@ -215,7 +218,7 @@ describe("Staking", function () {
     });
 
     it("Should manage terms", async () => {
-        const [_, user] = await ethers.getSigners();
+        const [_, user] = accounts;
 
         mine(
             await staking.manage(
@@ -239,7 +242,7 @@ describe("Staking", function () {
     });
 
     it("Should not manage from non admin", async () => {
-        const [_, user] = await ethers.getSigners();
+        const [_, user] = accounts;
 
         expect(
             staking
