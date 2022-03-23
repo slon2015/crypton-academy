@@ -73,7 +73,7 @@ contract Staking is AccessControl {
     function _calculateReward(StakingAccount storage account) internal view returns (uint256) {
         return (account.amount * 
             ((block.timestamp - account.lastClaimed) / terms.tick) * 
-            terms.rewardPercent) / 100.0 + account.collectedRewardAmount;
+            terms.rewardPercent) / 100 + account.collectedRewardAmount;
     }
 
     function getStakedAmount() external view returns(uint256) {

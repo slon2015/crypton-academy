@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-unused-expressions */
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { ADDRESS_ZERO } from "@uniswap/v3-sdk";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { Staking, Token } from "../typechain";
@@ -247,7 +246,14 @@ describe("Staking", function () {
         expect(
             staking
                 .connect(user)
-                .manage(ADDRESS_ZERO, ADDRESS_ZERO, 100, 100, ADDRESS_ZERO, 10)
+                .manage(
+                    ethers.constants.AddressZero,
+                    ethers.constants.AddressZero,
+                    100,
+                    100,
+                    ethers.constants.AddressZero,
+                    10
+                )
         ).to.be.reverted;
     });
 });
