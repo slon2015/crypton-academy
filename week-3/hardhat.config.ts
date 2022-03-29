@@ -6,10 +6,6 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
-import "./task";
-import "./task/stake";
-import "./task/unstake";
-import "./task/claim";
 import "./task/createNft";
 
 dotenv.config();
