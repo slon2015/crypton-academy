@@ -17,10 +17,10 @@ contract NFT is ERC1155, Ownable {
 
     }
 
-    function create(string memory metadata) external onlyOwner {
+    function create(string memory metadata, uint256 amount) external onlyOwner {
         _counter.increment();
         uint256 tokenId = _counter.current();
-        _mint(msg.sender, tokenId, 1, "");
+        _mint(msg.sender, tokenId, amount, "");
         _uris[tokenId] = metadata;
         emit TokenCreated(tokenId);
     }

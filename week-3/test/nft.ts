@@ -21,7 +21,7 @@ describe("NFT-Multitoken", function () {
     it("Should create new token with specified uri", async () => {
         const uri = "http://metadatas/123";
 
-        const tx = await multitoken.create(uri);
+        const tx = await multitoken.create(uri, 1);
 
         mine(tx);
 

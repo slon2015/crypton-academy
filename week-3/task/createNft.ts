@@ -8,6 +8,7 @@ task("createNft", "Create new nft from metadata")
     .addParam("contract", "Contract address")
     .addParam("sender", "Sender pk", "")
     .addParam("uri", "Metadata uri")
+    .addParam("amount", "Amount of token")
     .setAction(async (args, hre) => {
         const sender = await selectSigner(args, hre);
 
@@ -16,7 +17,7 @@ task("createNft", "Create new nft from metadata")
             args.contract
         )) as NFT;
 
-        const tx = await nft.connect(sender).create(args.uri);
+        const tx = await nft.connect(sender).create(args.uri, args.amount);
         await tx.wait();
 
         console.log("Succesfully created");

@@ -3,9 +3,9 @@
 
 ## ERC1155
 
-[Etherscan](https://rinkeby.etherscan.io/address/0x3Fd728cB62c26c7eCc9A142370e9028c669D0625)
+[Etherscan](https://rinkeby.etherscan.io/address/0xaF8f5b432a295B06B0792C92baf52F1111256DB4)
 
-[OpenSea](https://testnets.opensea.io/assets/0x3fd728cb62c26c7ecc9a142370e9028c669d0625/1)
+[OpenSea](https://testnets.opensea.io/assets/0xaF8f5b432a295B06B0792C92baf52F1111256DB4/1)
 
 ## ERC721
 
