@@ -3,10 +3,10 @@
 
 ## Marketplace
 
-[Etherscan](https://rinkeby.etherscan.io/address/0xC0CFA41D67dB0beCe0a2e68e91Bc02dB4f1a5840)
+[Etherscan](https://rinkeby.etherscan.io/address/0x0ffAebF2B3e074B49fF2b0DDE5D1E4D581999eb5)
 
 ## ERC721
 
-[Etherscan](https://rinkeby.etherscan.io/address/0xc4A06CFc0C1086Aa3a98Eb3118f361A95D449Fcd)
+[Etherscan](https://rinkeby.etherscan.io/address/0x7d416919CF5259CA00d56e412BD69760976BA263)
 
-[OpenSea](https://testnets.opensea.io/assets/0xc4A06CFc0C1086Aa3a98Eb3118f361A95D449Fcd/1)
+[OpenSea](https://testnets.opensea.io/assets/0x7d416919CF5259CA00d56e412BD69760976BA263/1)

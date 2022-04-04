@@ -10,9 +10,13 @@ async function main(): Promise<void> {
 
     console.log(`NFT contract deployed with address ${nft.address}`);
 
-    await hre.run("verify:verify", {
-        address: nft.address,
-    });
+    try {
+        await hre.run("verify:verify", {
+            address: nft.address,
+        });
+    } catch (e: any) {
+        console.error(e);
+    }
 
     const Marketplace = await ethers.getContractFactory("Marketplace");
 
@@ -24,9 +28,13 @@ async function main(): Promise<void> {
         `Marketplace contract deployed with address ${marketplace.address}`
     );
 
-    await hre.run("verify:verify", {
-        address: marketplace.address,
-    });
+    try {
+        await hre.run("verify:verify", {
+            address: marketplace.address,
+        });
+    } catch (e: any) {
+        console.error(e);
+    }
 
     const transferOwnership = await nft.transferOwnership(marketplace.address);
     const setNft = await marketplace.setNft(nft.address);

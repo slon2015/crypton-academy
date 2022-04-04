@@ -17,10 +17,9 @@ contract Marketplace is Ownable {
         uint tokenIndex;
         address seller;
 
-        uint minValue;
+        uint price;
         
         uint auctionCurrentValue;
-        uint auctionBidCount;
         uint auctionStartTimestamp;
     }
 
@@ -29,6 +28,7 @@ contract Marketplace is Ownable {
         uint tokenIndex;
         address bidder;
         uint value;
+        uint bidCount;
     }
 
     mapping (uint => Offer) private offersForSale;
@@ -64,7 +64,7 @@ contract Marketplace is Ownable {
             tokenIndex, 
             _msgSender(), 
             minPriceInWei, 
-            0, 0, 0
+            0, 0
         );
     }
 
@@ -73,17 +73,21 @@ contract Marketplace is Ownable {
 
         require(offer.offerType == OfferType.SIMPLE, "Token not for sale");
         require(offer.seller == nft.ownerOf(tokenIndex), "Owner changed");
-        require(msg.value >= offer.minValue, "Too low bid");
+        require(msg.value >= offer.price, "Too low bid");
 
         nft.safeTransferFrom(offer.seller, _msgSender(), tokenIndex);
-        pendingWithdrawals[offer.seller] += msg.value;
+        pendingWithdrawals[offer.seller] += offer.price;
+
+        if (msg.value > offer.price) {
+            pendingWithdrawals[_msgSender()] += msg.value - offer.price;
+        }
 
         offersForSale[tokenIndex] = Offer(
             OfferType.NONE, 
             tokenIndex, 
             address(0), 
             0,
-            0, 0, 0
+            0, 0
         );
     }
 
@@ -97,7 +101,7 @@ contract Marketplace is Ownable {
             tokenIndex, 
             address(0), 
             0,
-            0, 0, 0
+            0, 0
         );
     }
 
@@ -113,7 +117,6 @@ contract Marketplace is Ownable {
             _msgSender(),
             0,
             minPriceInWei,
-            0,
             block.timestamp
         );
     }
@@ -125,24 +128,31 @@ contract Marketplace is Ownable {
         require(msg.value > offer.auctionCurrentValue, "There is greater bid");
 
         Bid memory failedBid = bids[tokenIndex];
+        require(_msgSender() != failedBid.bidder, "Override self bid");
+
         if (failedBid.value > 0) {
             pendingWithdrawals[failedBid.bidder] += failedBid.value;
         }
 
-        bids[tokenIndex] = Bid(true, tokenIndex, _msgSender(), msg.value);
+        bids[tokenIndex] = Bid(
+            true, 
+            tokenIndex, 
+            _msgSender(), 
+            msg.value, 
+            failedBid.bidCount + 1
+        );
         offer.auctionCurrentValue = msg.value;
-        offer.auctionBidCount += 1;
     }
 
     function finishAuction(uint tokenIndex) external {
         Offer storage offer = offersForSale[tokenIndex];
+        Bid memory winerBid = bids[tokenIndex];
         require(offer.offerType == OfferType.AUCTION, "There is no auction");
         require(offer.seller == nft.ownerOf(tokenIndex), "Not owner");
-        require(offer.auctionBidCount >= 2, "Too low bid count");
+        require(winerBid.bidCount > 2, "Too low bid count");
         require(block.timestamp >= offer.auctionStartTimestamp + AUCTION_TIME, "Too early to finish auction");
 
-        Bid memory winerBid = bids[tokenIndex];
-        bids[tokenIndex] = Bid(false, tokenIndex, address(0), 0);
+        bids[tokenIndex] = Bid(false, tokenIndex, address(0), 0, 0);
 
         nft.safeTransferFrom(offer.seller, winerBid.bidder, tokenIndex);
         pendingWithdrawals[offer.seller] += winerBid.value;
@@ -152,7 +162,7 @@ contract Marketplace is Ownable {
             tokenIndex, 
             address(0),
             0,
-            0, 0, 0
+            0, 0
         );
     }
 
@@ -166,13 +176,13 @@ contract Marketplace is Ownable {
         if (cancelledBid.value > 0) {
             pendingWithdrawals[cancelledBid.bidder] += cancelledBid.value;
         }
-        bids[tokenIndex] = Bid(false, tokenIndex, address(0), 0);
+        bids[tokenIndex] = Bid(false, tokenIndex, address(0), 0, 0);
         offersForSale[tokenIndex] = Offer(
             OfferType.NONE, 
             tokenIndex, 
             address(0),
             0,
-            0, 0, 0
+            0, 0
         );
     }
 }

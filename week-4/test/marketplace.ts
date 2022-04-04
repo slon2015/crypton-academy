@@ -60,6 +60,27 @@ describe("MarketPlace", function () {
         );
     });
 
+    it("Should return ether margin", async () => {
+        const initialOwnerBalance = await Owner.getBalance();
+        const initialBuyerBalance = await Buyer.getBalance();
+
+        mine(await marketplace.connect(Owner).listItem(1, 100));
+
+        mine(await marketplace.connect(Buyer).buyItem(1, { value: 150 }));
+        mine(
+            await marketplace.connect(Owner).withdraw(),
+            await marketplace.connect(Buyer).withdraw()
+        );
+
+        expect(await nft.ownerOf(1)).to.be.equal(Buyer.address);
+        expect(await Owner.getBalance()).to.be.equal(
+            initialOwnerBalance.add(100)
+        );
+        expect(await Buyer.getBalance()).to.be.equal(
+            initialBuyerBalance.sub(100)
+        );
+    });
+
     it("Should list & cancel offer without buying", async () => {
         const initialOwnerBalance = await Owner.getBalance();
         const initialBuyerBalance = await Buyer.getBalance();
@@ -72,7 +93,7 @@ describe("MarketPlace", function () {
         expect(await Buyer.getBalance()).to.be.equal(initialBuyerBalance);
     });
 
-    it("Should list on auction and sold for second bid", async () => {
+    it("Should list on auction and sold for third bid", async () => {
         const initialOwnerBalance = await Owner.getBalance();
         const initialBuyerBalance = await Buyer.getBalance();
         const initialSecondBuyerBalance = await SecondBuyer.getBalance();
@@ -91,20 +112,31 @@ describe("MarketPlace", function () {
             })
         );
 
+        mine(
+            await marketplace.connect(Buyer).makeBid(1, {
+                value: 170,
+            })
+        );
+
         mine(await marketplace.connect(Buyer).withdraw());
 
         increaseTime(auctionTime + 100);
 
         mine(await marketplace.connect(Owner).finishAuction(1));
-        mine(await marketplace.connect(Owner).withdraw());
-
-        expect(await nft.ownerOf(1)).to.be.equal(SecondBuyer.address);
-        expect(await Owner.getBalance()).to.be.equal(
-            initialOwnerBalance.add(150)
+        mine(
+            await marketplace.connect(Owner).withdraw(),
+            await marketplace.connect(SecondBuyer).withdraw()
         );
-        expect(await Buyer.getBalance()).to.be.equal(initialBuyerBalance);
+
+        expect(await nft.ownerOf(1)).to.be.equal(Buyer.address);
+        expect(await Owner.getBalance()).to.be.equal(
+            initialOwnerBalance.add(170)
+        );
+        expect(await Buyer.getBalance()).to.be.equal(
+            initialBuyerBalance.sub(170)
+        );
         expect(await SecondBuyer.getBalance()).to.be.equal(
-            initialSecondBuyerBalance.sub(150)
+            initialSecondBuyerBalance
         );
     });
 
@@ -150,7 +182,6 @@ describe("MarketPlace", function () {
         increaseTime(auctionTime + 100);
 
         mine(await marketplace.connect(Owner).cancelAuction(1));
-        mine(await marketplace.connect(SecondBuyer).withdraw());
 
         expect(await nft.ownerOf(1)).to.be.equal(Owner.address);
         expect(await Owner.getBalance()).to.be.equal(initialOwnerBalance);
