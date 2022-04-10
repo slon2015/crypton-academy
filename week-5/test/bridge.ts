@@ -12,15 +12,19 @@ describe("Bridge OneNetwork-mock", function () {
         gateB: Bridge,
         tokenA: Token,
         tokenB: Token,
+        deployer: SignerWithAddress,
         sender: SignerWithAddress,
         recepient: SignerWithAddress,
-        thirdParty: SignerWithAddress;
+        thirdParty: SignerWithAddress,
+        validator: SignerWithAddress;
     let nonce: number;
+    const minted = ethers.BigNumber.from(1000000000000000);
     const amountToTransfer = 100;
 
     this.beforeEach(async () => {
         nonce = 1;
-        [sender, recepient, thirdParty] = await ethers.getSigners();
+        [deployer, sender, recepient, thirdParty, validator] =
+            await ethers.getSigners();
         const TokenFactory = await ethers.getContractFactory("Token");
         const BridgeFactory = await ethers.getContractFactory("Bridge");
 
@@ -29,17 +33,25 @@ describe("Bridge OneNetwork-mock", function () {
 
         await Promise.all([tokenA.deployed(), tokenB.deployed()]);
 
-        const mintTx = await tokenA.mint(amountToTransfer, sender.address);
-        await mintTx.wait();
-
-        gateA = await BridgeFactory.deploy(tokenA.address);
-        gateB = await BridgeFactory.deploy(tokenB.address);
+        gateA = await BridgeFactory.deploy(tokenA.address, validator.address);
+        gateB = await BridgeFactory.deploy(tokenB.address, validator.address);
 
         await Promise.all([gateA.deployed(), gateB.deployed()]);
 
-        const transferOwnerATx = await tokenA.transferOwnership(gateA.address);
-        const transferOwnerBTx = await tokenB.transferOwnership(gateB.address);
-        await Promise.all([transferOwnerATx.wait(), transferOwnerBTx.wait()]);
+        await Promise.all([
+            await tokenA
+                .connect(deployer)
+                .transfer(gateA.address, minted.div(2)),
+            await tokenB
+                .connect(deployer)
+                .transfer(gateB.address, minted.div(2)),
+            await tokenA
+                .connect(deployer)
+                .transfer(sender.address, amountToTransfer),
+            await tokenA
+                .connect(sender)
+                .approve(gateA.address, amountToTransfer),
+        ]);
     });
 
     it("Should transfer tokens", async () => {
@@ -50,11 +62,11 @@ describe("Bridge OneNetwork-mock", function () {
             )
         );
 
-        const signature = await sender.signMessage(message);
+        const signature = await validator.signMessage(message);
 
         const transferTx = await gateA
             .connect(sender)
-            .swap(recepient.address, amountToTransfer, nonce, signature);
+            .swap(recepient.address, amountToTransfer, nonce);
 
         await transferTx.wait();
 
@@ -68,13 +80,24 @@ describe("Bridge OneNetwork-mock", function () {
 
         await receiveTx.wait();
 
-        expect(await tokenA.totalSupply()).to.equal(0);
         expect(await tokenA.balanceOf(sender.address)).to.equal(0);
 
-        expect(await tokenB.totalSupply()).to.equal(amountToTransfer);
         expect(await tokenB.balanceOf(recepient.address)).to.equal(
             amountToTransfer
         );
+    });
+
+    it("Should not transfer tokens without approve", async () => {
+        const unapproveTx = await tokenA
+            .connect(sender)
+            .approve(gateA.address, 0);
+        await unapproveTx.wait();
+
+        const transferTx = gateA
+            .connect(sender)
+            .swap(recepient.address, amountToTransfer, nonce);
+
+        expect(transferTx).to.be.revertedWith("Tokens not allowed");
     });
 
     it("should not accept signature from invalid user", async () => {
@@ -89,7 +112,7 @@ describe("Bridge OneNetwork-mock", function () {
 
         const transferTx = await gateA
             .connect(sender)
-            .swap(recepient.address, amountToTransfer, nonce, signature);
+            .swap(recepient.address, amountToTransfer, nonce);
 
         await transferTx.wait();
 
@@ -105,24 +128,15 @@ describe("Bridge OneNetwork-mock", function () {
     });
 
     it("Should not init more than one transfer for same nonce", async () => {
-        const message = arrayify(
-            solidityKeccak256(
-                ["address", "address", "uint", "uint"],
-                [sender.address, recepient.address, amountToTransfer, nonce]
-            )
-        );
-
-        const signature = await sender.signMessage(message);
-
         const transferTx = await gateA
             .connect(sender)
-            .swap(recepient.address, amountToTransfer, nonce, signature);
+            .swap(recepient.address, amountToTransfer, nonce);
 
         await transferTx.wait();
 
         const secondTransfer = gateA
             .connect(sender)
-            .swap(recepient.address, amountToTransfer, nonce, signature);
+            .swap(recepient.address, amountToTransfer, nonce);
 
         expect(secondTransfer).to.be.revertedWith("Transfer already processed");
     });
@@ -135,11 +149,11 @@ describe("Bridge OneNetwork-mock", function () {
             )
         );
 
-        const signature = await sender.signMessage(message);
+        const signature = await validator.signMessage(message);
 
         const transferTx = await gateA
             .connect(sender)
-            .swap(recepient.address, amountToTransfer, nonce, signature);
+            .swap(recepient.address, amountToTransfer, nonce);
 
         await transferTx.wait();
 

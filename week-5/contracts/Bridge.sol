@@ -7,7 +7,10 @@ import "@openzeppelin/contracts/utils/Context.sol";
 
 contract Bridge is Context {
 
+    bytes32 public constant ROLE_RELAYER = keccak256("ROLE_RELAYER");
+
     Token private token;
+    address private validator;
 
     mapping(address => mapping(uint => bool)) public processedNonces;
 
@@ -16,7 +19,7 @@ contract Bridge is Context {
         address to,
         uint amount,
         uint nonce,
-        bytes signature
+        bytes32 messageToSign
     );
 
     event SwapComplete(
@@ -27,20 +30,27 @@ contract Bridge is Context {
         bytes signature
     );
 
-    constructor(Token _token) {
+    constructor(Token _token, address _validator) {
         token = _token;
+        validator = _validator;
     }
 
-    function swap(address to, uint amount, uint nonce, bytes calldata signature) external {
+    function swap(address to, uint amount, uint nonce) external {
         require(processedNonces[_msgSender()][nonce] == false, "Transfer already processed");
+        require(token.allowance(_msgSender(), address(this)) >= amount, "Tokens not allowed");
         processedNonces[_msgSender()][nonce] = true;
-        token.burn(amount, _msgSender());
+        token.transferFrom(_msgSender(), address(this), amount);
         emit SwapInitialized(
             msg.sender,
             to,
             amount,
             nonce,
-            signature
+            keccak256(abi.encodePacked(
+                _msgSender(), 
+                to, 
+                amount,
+                nonce
+            ))
         );
     }
 
@@ -60,10 +70,10 @@ contract Bridge is Context {
             ))
         );
 
-        require(ECDSA.recover(message, signature) == from, "Wrong signature");
+        require(ECDSA.recover(message, signature) == validator, "Wrong signature");
         require(processedNonces[from][nonce] == false, "Transfer already processed");
         processedNonces[from][nonce] = true;
-        token.mint(amount, to);
+        token.transfer(to, amount);
         emit SwapComplete(
             from,
             to,

@@ -21,12 +21,9 @@ async function main(): Promise<void> {
         console.error(e);
     }
 
-    const mintTx = await token.mint(10000000, deployer.address);
-    await mintTx.wait();
-
     const BridgeFactory = await ethers.getContractFactory("Bridge");
 
-    const bridgeArgs: [string] = [token.address];
+    const bridgeArgs: [string, string] = [token.address, deployer.address];
     const bridge = await BridgeFactory.deploy(...bridgeArgs);
 
     await bridge.deployTransaction.wait(5);
@@ -42,9 +39,12 @@ async function main(): Promise<void> {
         console.error(e);
     }
 
-    const transferOwnership = await token.transferOwnership(bridge.address);
+    const addFunds = await token.transfer(
+        bridge.address,
+        (await token.balanceOf(deployer.address)).div(2)
+    );
 
-    await transferOwnership.wait();
+    await addFunds.wait();
 }
 
 main().catch((error) => {
