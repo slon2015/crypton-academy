@@ -1,6 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
-import { BigNumber, ContractTransaction, Transaction } from "ethers";
+import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
 import {
     ACDM,
@@ -11,10 +11,7 @@ import {
     XXXToken,
 } from "../typechain";
 import { increaseTime } from "./utils";
-import UniswapV2Factory from "@uniswap/v2-core/build/UniswapV2Factory.json";
 import UniswapRouter from "@uniswap/v2-periphery/build/UniswapV2Router02.json";
-import WETH from "@uniswap/v2-periphery/build/WETH9.json";
-import { Artifact } from "hardhat/types";
 
 describe("Platform", async function () {
     let owner: SignerWithAddress,
@@ -36,6 +33,10 @@ describe("Platform", async function () {
             await sendTx.wait();
         }
 
+        const approve = await xtoken
+            .connect(user)
+            .approve(staking.address, amount);
+        await approve.wait();
         const stakeTx = await staking.connect(user).stake(amount);
         await stakeTx.wait();
     }
@@ -49,6 +50,11 @@ describe("Platform", async function () {
         await voteTx.wait();
     }
 
+    async function registerWithReferal(
+        user: SignerWithAddress,
+        referal?: SignerWithAddress
+    ) {}
+
     this.beforeEach(async () => {
         [owner, seller, trader1, trader2] = await ethers.getSigners();
 
@@ -58,36 +64,9 @@ describe("Platform", async function () {
         const platformFactory = await ethers.getContractFactory("Platform");
         const daoFactory = await ethers.getContractFactory("DAO");
         const stakingFactory = await ethers.getContractFactory("Staking");
-        const uniswapFactoryFactory = ethers.ContractFactory.fromSolidity(
-            UniswapV2Factory,
-            owner
-        );
-
-        const wethFactory = ethers.ContractFactory.fromSolidity(WETH, owner);
-        const routerFactory = ethers.ContractFactory.fromSolidity(
-            UniswapRouter,
-            owner
-        );
-
-        const uniswapFactory = await uniswapFactoryFactory.deploy(
-            owner.address
-        );
-        await uniswapFactory.deployed();
-
-        const weth = await wethFactory.deploy();
-        await weth.deployed();
-
-        const router = await routerFactory.deploy(
-            uniswapFactory.address,
-            weth.address
-        );
-        await router.deployed();
 
         authority = await authorityFactory.deploy();
         await authority.deployed();
-
-        const setRouter = await authority.setRouter(router.address);
-        await setRouter.wait();
 
         acdm = await acdmFactory.deploy(authority.address);
         await acdm.deployed();
@@ -105,7 +84,7 @@ describe("Platform", async function () {
         await setPlatform.wait();
 
         dao = await daoFactory.deploy(250, 1000, authority.address);
-        await platform.deployed();
+        await dao.deployed();
         const setDao = await authority.setDao(dao.address);
         await setDao.wait();
 
@@ -119,29 +98,38 @@ describe("Platform", async function () {
         );
         await staking.deployed();
 
-        const setStaking = await authority.setStaking(staking.address);
-        await setStaking.wait();
-
         const xTokenAmountToPair = BigNumber.from(10000);
         const ethAmountToPair = xTokenAmountToPair.mul(1e6);
 
+        const routerAddress = await authority.router();
+        const router = new Contract(
+            routerAddress,
+            UniswapRouter.interface,
+            owner
+        );
         const approveForLiquidity = await xtoken.approve(
-            router.address,
+            routerAddress,
             xTokenAmountToPair
         );
         await approveForLiquidity.wait();
 
-        const addLiquidityTx = (await (router as any).addLiquidityETH(
+        const addLiquidityTx = await (router as unknown as any).addLiquidityETH(
             xtoken.address,
             xTokenAmountToPair,
-            xTokenAmountToPair,
-            ethAmountToPair,
+            0,
+            0,
             owner.address,
             (
                 await ethers.provider.getBlock(ethers.provider._lastBlockNumber)
-            ).timestamp + 1000
-        )) as ContractTransaction;
+            ).timestamp + 1000,
+            {
+                value: ethAmountToPair,
+            }
+        );
         await addLiquidityTx.wait();
+
+        const setStaking = await authority.setStaking(staking.address);
+        await setStaking.wait();
 
         const startTx = await platform.startPlatform();
         await startTx.wait();
@@ -211,6 +199,9 @@ describe("Platform", async function () {
         await propose.wait();
         await voteFor(trader1, 150, 0);
         await voteFor(trader2, 150, 0);
+
+        await increaseTime(1100);
+
         const finishProposal = await dao.finishProposal(0);
         await finishProposal.wait();
 

@@ -55,20 +55,24 @@ abstract contract ReferalsFeature is Permissions {
     }
 
     function buyXToken() external onlyDao {
+        console.log("Buy & burn");
         address[] memory path = new address[](2);
         path[0] = address(authority.router().WETH());
         path[1] = address(authority.acdmx());
         (bool success, bytes memory result) = address(authority.router()).call{value: extractedComission}(
             abi.encodeWithSignature(
-                "swapExactETHForTokens(uint256,address[],address,uint256)", 
-                0,
+                "swapExactETHForTokens(uint,address[],address,uint)", 
+                1,
                 path,
                 address(this),
-                block.timestamp + 1000
+                block.timestamp
             )
         );
+        console.log(success);
+        console.logBytes(result);
         require(success, "Swap failed");
         uint[] memory amounts = abi.decode(result, (uint[]));
+        console.log(amounts[1]);
 
         authority.acdmx().burn(address(this), amounts[1]);
 

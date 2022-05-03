@@ -19,6 +19,7 @@ describe("Platform", async function () {
         const authorityFactory = await ethers.getContractFactory("Authority");
         const acdmFactory = await ethers.getContractFactory("ACDM");
         const platformFactory = await ethers.getContractFactory("Platform");
+        const daoFactory = await ethers.getContractFactory("DAO");
 
         authority = await authorityFactory.deploy();
         await authority.deployed();
@@ -27,6 +28,11 @@ describe("Platform", async function () {
         await acdm.deployed();
         const setAcdm = await authority.setACDM(acdm.address);
         await setAcdm.wait();
+
+        const dao = await daoFactory.deploy(250, 1000, authority.address);
+        await dao.deployed();
+        const setDao = await authority.setDao(dao.address);
+        await setDao.wait();
 
         platform = await platformFactory.deploy(authority.address);
         await platform.deployed();

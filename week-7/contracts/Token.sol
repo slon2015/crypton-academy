@@ -25,7 +25,7 @@ contract ACDM is ERC20, Permissions {
 contract XXXToken is ERC20, Permissions {
 
     constructor(Authority _authority) ERC20("XXX Coin", "XXX") Permissions(_authority) {
-        _mint(_msgSender(), 1000000000000000);
+        _mint(_msgSender(), 100000000000000000000);
     }
 
     function decimals() public view override returns (uint8) {
