@@ -56,7 +56,7 @@ abstract contract PhaseFeature is Ownable, Permissions {
     }
 
     function isPhaseStillActive() external view returns(bool) {
-        return (block.timestamp - startPhaseTimestamp) >= PHASE_DURATION;
+        return (block.timestamp - startPhaseTimestamp) < PHASE_DURATION;
     }
 
     function determinePhase(uint targetTimestamp) internal returns(Phase) {

@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-expressions */
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
@@ -73,10 +74,8 @@ describe("Platform", async function () {
     });
 
     it("Should trade tokens on TRADE phase", async () => {
-        const initialBalanceForTrader1 = await trader1.getBalance();
         let trader1GasUsage = BigNumber.from(0);
         let trader2GasUsage = BigNumber.from(0);
-        const initialBalanceForTrader2 = await trader2.getBalance();
 
         const salePrice = await platform.price();
         const balanceToBuy = salePrice.mul(10);
@@ -104,6 +103,9 @@ describe("Platform", async function () {
             (await setOrder.wait()).effectiveGasPrice
         );
 
+        const initialBalanceForTrader1 = await trader1.getBalance();
+        const initialBalanceForTrader2 = await trader2.getBalance();
+
         const buyOrder = await platform
             .connect(trader2)
             .buyFromOrder(0, 10, { value: balanceToBuy.mul(2) });
@@ -112,7 +114,7 @@ describe("Platform", async function () {
         );
 
         expect(await trader1.getBalance()).is.equal(
-            initialBalanceForTrader1.add(balanceToBuy).sub(trader1GasUsage)
+            initialBalanceForTrader1.add(balanceToBuy.mul(2).mul(950).div(1000))
         );
         expect(await trader2.getBalance()).is.equal(
             initialBalanceForTrader2
@@ -121,6 +123,24 @@ describe("Platform", async function () {
         );
         expect(await acdm.balanceOf(trader2.address)).is.equal(10);
         expect(await platform.tradeCap()).is.equal(balanceToBuy.mul(2));
+    });
+
+    it("Should correctly identifies current phase activity", async () => {
+        expect(await platform.isPhaseStillActive()).is.true;
+        expect(await platform.currentPhase()).is.equal(2);
+
+        await increaseTime(
+            (await platform.PHASE_DURATION()).add(1000).toNumber()
+        );
+
+        expect(await platform.isPhaseStillActive()).is.false;
+        expect(await platform.currentPhase()).is.equal(2);
+
+        const changePhase = await platform.changePhase();
+        await changePhase.wait();
+
+        expect(await platform.isPhaseStillActive()).is.true;
+        expect(await platform.currentPhase()).is.equal(1);
     });
 
     it("Should close order", async () => {

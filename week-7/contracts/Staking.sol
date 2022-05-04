@@ -25,10 +25,9 @@ contract Staking is AccessControl, Permissions {
         XXXToken rewardToken;
         uint256 tick;
         uint8 rewardPercent;
-        uint256 freezePeriod;
     }
 
-    Terms private terms;
+    Terms public terms;
     mapping(address => StakingAccount) private _accounts;
 
     constructor(
@@ -36,25 +35,22 @@ contract Staking is AccessControl, Permissions {
         XXXToken rewardToken,
         uint256 tick,
         uint8 rewardPercent,
-        uint256 freezePeriod,
         Authority _authority
     ) Permissions(_authority) {
         _setupRole(MANAGER_ROLE, _msgSender());
-        manage(stakingToken, rewardToken, tick, rewardPercent, freezePeriod);
+        manage(stakingToken, rewardToken, tick, rewardPercent);
     }
 
     function manage(
         IERC20 stakingToken,
         XXXToken rewardToken,
         uint256 tick,
-        uint8 rewardPercent,
-        uint256 freezePeriod
+        uint8 rewardPercent
     ) public onlyRole(MANAGER_ROLE) {
         terms.tokenToSatking = stakingToken;
         terms.rewardToken = rewardToken;
         terms.tick = tick;
         terms.rewardPercent = rewardPercent;
-        terms.freezePeriod = freezePeriod;
     }
 
     function stake(uint256 amountToStake) external {
@@ -73,7 +69,7 @@ contract Staking is AccessControl, Permissions {
     function _calculateReward(StakingAccount storage account) internal view returns (uint256) {
         return (account.amount * 
             ((block.timestamp - account.lastClaimed) / terms.tick) * 
-            terms.rewardPercent) / 100 + account.collectedRewardAmount;
+            terms.rewardPercent) / 1000 + account.collectedRewardAmount;
     }
 
     function getStakedAmount(address user) external view returns(uint256) {
@@ -103,7 +99,7 @@ contract Staking is AccessControl, Permissions {
 
     function unstake() external {
         StakingAccount storage account = _accounts[_msgSender()];
-        require(block.timestamp - account.stakedTimestamp >= terms.freezePeriod, 
+        require(block.timestamp - account.stakedTimestamp >= authority.dao().stakingFreezePeriod(), 
             "Too early to unstake");
         if (getClaimableAmount() > 0) {
             _claim();
@@ -113,9 +109,5 @@ contract Staking is AccessControl, Permissions {
 
         account.amount = 0;
         _accounts[_msgSender()] = account;
-    }
-
-    function getTerms() external view returns(Terms memory) {
-        return terms;
     }
 }

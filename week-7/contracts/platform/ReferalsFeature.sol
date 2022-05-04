@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "../Authority.sol";
 import "../Permissions.sol";
-import "hardhat/console.sol";
 
 abstract contract ReferalsFeature is Permissions {
     
@@ -22,18 +21,22 @@ abstract contract ReferalsFeature is Permissions {
 
     function applyComissionsFromSale(uint amount, address sender) internal {
         (address firstLevel, address secondLevel) = get2levelReferals(sender);
+        extractedComission += (amount / 1000) * 920;
+        uint amountToFirst = (amount / 1000) * authority.dao().firstLevelReferalPercentileForSale();
+        uint amountToSecond = (amount / 1000) * authority.dao().secondLevelReferalPercentileForSale();
         if (firstLevel != address(0)) {
-            uint amountToFirst = (amount / 100) * 3;
             firstLevel.call{value: amountToFirst}("");
+        } else {
+            extractedComission += amountToFirst;
         }
         if (secondLevel != address(0)) {
-            uint amountToSecond = (amount / 100) * 5;
             secondLevel.call{value: amountToSecond}("");
+        } else {
+            extractedComission += amountToSecond;
         }
     }
 
-    function applyComissionForTrade(uint amount, address sender) internal {
-        console.log("Taking commision from TRADE");
+    function applyComissionForTrade(uint amount, address sender) internal returns (uint) {
         (address firstLevel, address secondLevel) = get2levelReferals(sender);
         uint percentile = authority.dao().tradeReferalFeePercentile();
         uint comissionAmount = amount * percentile / 1000;
@@ -47,35 +50,29 @@ abstract contract ReferalsFeature is Permissions {
         } else {
             extractedComission += comissionAmount;
         }
+        return comissionAmount * 2;
     }
 
-    function sendToOwner(address owner) external onlyDao {
-        owner.call{value: extractedComission}("");
-        extractedComission = 0;
+    function sendToOwner(address owner, uint weiToSend) external onlyDao {
+        require(weiToSend <= extractedComission, "Too large amount to send");
+        owner.call{value: weiToSend}("");
+        extractedComission -= weiToSend;
     }
 
-    function buyXToken() external onlyDao {
-        console.log("Buy & burn");
+    function buyXToken(uint weiToSpend) external onlyDao {
+        require(weiToSpend <= extractedComission, "Too large amount to spend");
         address[] memory path = new address[](2);
         path[0] = address(authority.router().WETH());
         path[1] = address(authority.acdmx());
-        (bool success, bytes memory result) = address(authority.router()).call{value: extractedComission}(
-            abi.encodeWithSignature(
-                "swapExactETHForTokens(uint,address[],address,uint)", 
-                1,
-                path,
-                address(this),
-                block.timestamp
-            )
+        uint[] memory amounts = authority.router().swapExactETHForTokens{value: weiToSpend}( 
+            0,
+            path,
+            address(this),
+            block.timestamp + 1000
         );
-        console.log(success);
-        console.logBytes(result);
-        require(success, "Swap failed");
-        uint[] memory amounts = abi.decode(result, (uint[]));
-        console.log(amounts[1]);
 
         authority.acdmx().burn(address(this), amounts[1]);
 
-        extractedComission = 0;
+        extractedComission -= weiToSpend;
     }
 }

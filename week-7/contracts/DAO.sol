@@ -43,6 +43,9 @@ contract DAO is Ownable, Permissions {
     } 
 
     uint public tradeReferalFeePercentile = 25;
+    uint public stakingFreezePeriod = 60 * 60 * 24 * 7;
+    uint public firstLevelReferalPercentileForSale = 30;
+    uint public secondLevelReferalPercentileForSale = 50;
 
     Counters.Counter private ids;
     uint256 private minimumQuorum;
@@ -64,8 +67,10 @@ contract DAO is Ownable, Permissions {
         address recepient, 
         bytes memory _calldata, 
         string memory description
-    ) external onlyOwner {
-
+    ) 
+        external 
+        onlyOwner 
+    {
         proposals[ids.current()] = Proposal(
             ProposalStatus.PROPOSED,
             recepient,
@@ -102,7 +107,11 @@ contract DAO is Ownable, Permissions {
         account.propositionVotes.add(id);
     }
 
-    function hasUnfinishedVotes(address participant) external view returns(bool) {
+    function hasUnfinishedVotes(address participant) 
+        external 
+        view 
+        returns(bool) 
+    {
         Account storage account = accounts[participant];
         for (
                 uint256 proposalIndex = 0; 
@@ -136,7 +145,31 @@ contract DAO is Ownable, Permissions {
         }
     }
 
-    function setTradeReferalFeePercentile(uint newPercentile) external onlyDao {
+    function setTradeReferalFeePercentile(uint newPercentile) 
+        external 
+        onlyDao 
+    {
         tradeReferalFeePercentile = newPercentile;
+    }
+
+    function setStakingFreezePeriod(uint newFreezePeriod) 
+        external 
+        onlyDao 
+    {
+        stakingFreezePeriod = newFreezePeriod;
+    }
+
+    function setFirstLevelReferalPercentileForSale(uint newPercentile) 
+        external 
+        onlyDao 
+    {
+        firstLevelReferalPercentileForSale = newPercentile;
+    }
+
+    function setSecondLevelReferalPercentileForSale(uint newPercentile) 
+        external 
+        onlyDao 
+    {
+        secondLevelReferalPercentileForSale = newPercentile;
     }
 }

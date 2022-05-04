@@ -1,9 +1,9 @@
-import { BigNumber, Contract, ContractTransaction } from "ethers";
+import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
-import UniswapRouter from "@uniswap/v2-periphery/build/UniswapV2Router02.json";
 import UniswapFactory from "@uniswap/v2-core/build/UniswapV2Factory.json";
 import { Authority, XXXToken } from "../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { IUniswapV2Router02 } from "../typechain";
 
 export async function createSystem() {
     const [owner] = await ethers.getSigners();
@@ -24,8 +24,7 @@ export async function createSystem() {
     const XToken = await XXXFactory.deploy(authority.address);
     await XToken.deployed();
 
-    const pair = await addLiquidity(authority, owner, XToken);
-    console.log(`Uniswap pair created: ${pair}`);
+    const pairAddress = await addLiquidity(authority, owner, XToken);
 
     const setACDM = await authority.setACDM(ACDMToken.address);
     const setACDMx = await authority.setACDMx(XToken.address);
@@ -42,14 +41,12 @@ export async function createSystem() {
     await dao.deployed();
 
     const tick = 60 * 60 * 24 * 7;
-    const rewardPercent = 3;
-    const freezePeriod = tick;
+    const rewardPercent = 30;
     const staking = await StakingFactory.deploy(
-        pair,
+        pairAddress,
         XToken.address,
         tick,
         rewardPercent,
-        freezePeriod,
         authority.address
     );
     await staking.deployed();
@@ -80,13 +77,12 @@ export async function createSystem() {
             contract: staking,
             tick,
             rewardPercent,
-            freezePeriod,
+            pair: await ethers.getContractAt("ERC20", pairAddress),
             args: [
-                pair,
+                pairAddress,
                 XToken.address,
                 tick,
                 rewardPercent,
-                freezePeriod,
                 authority.address,
             ],
         },
@@ -112,16 +108,17 @@ export async function addLiquidity(
     const ethAmountToPair = xTokenAmountToPair.div(1e5);
 
     const routerAddress = await authority.router();
-    const router = new Contract(routerAddress, UniswapRouter.interface, owner);
+    const router = await ethers.getContractAt(
+        "IUniswapV2Router02",
+        routerAddress
+    );
     const approveForLiquidity = await XToken.approve(
         routerAddress,
         xTokenAmountToPair
     );
     await approveForLiquidity.wait();
 
-    const addLiquidityTx: ContractTransaction = await (
-        router as any
-    ).addLiquidityETH(
+    const addLiquidityTx = await router.addLiquidityETH(
         XToken.address,
         xTokenAmountToPair,
         xTokenAmountToPair,

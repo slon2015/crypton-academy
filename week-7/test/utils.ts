@@ -1,7 +1,8 @@
+import { BigNumberish } from "ethers";
 import { ethers } from "hardhat";
 import { ERC20 } from "../typechain";
 
-export async function increaseTime(time: number): Promise<void> {
+export async function increaseTime(time: BigNumberish): Promise<void> {
     await ethers.provider.send("evm_increaseTime", [time]);
 
     await ethers.provider.send("evm_mine", []);

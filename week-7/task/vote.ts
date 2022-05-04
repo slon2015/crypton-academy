@@ -1,16 +1,6 @@
-import { ContractTransaction, Event, Signer } from "ethers";
 import { task } from "hardhat/config";
+import { DAO } from "./types";
 import { selectSigner } from "./utils";
-
-interface DAO {
-    connect(sender: Signer): {
-        vote(
-            id: number,
-            amount: number,
-            voteType: number
-        ): Promise<ContractTransaction>;
-    };
-}
 
 task("vote", "Vote for proposal")
     .addParam("contract", "Contract address")

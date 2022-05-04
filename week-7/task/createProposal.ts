@@ -1,16 +1,7 @@
 import { ContractTransaction, Event, Signer } from "ethers";
 import { task } from "hardhat/config";
+import { DAO } from "./types";
 import { selectSigner } from "./utils";
-
-interface DAO {
-    connect(sender: Signer): {
-        createProposal(
-            recepient: string,
-            calldata: string,
-            description: string
-        ): Promise<ContractTransaction>;
-    };
-}
 
 task("createProposal", "Create proposal with specified recipient and calldata")
     .addParam("contract", "Contract address")

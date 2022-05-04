@@ -65,10 +65,10 @@ abstract contract TradeFeature is PhaseFeature, ReferalsFeature {
             _msgSender().call{value: toSendBack}("");
         }
         tradeCap += msg.value - toSendBack;
-        applyComissionForTrade(msg.value, _msgSender());
+        uint comissionAmount = applyComissionForTrade(msg.value, order.seller);
 
         authority.acdm().transfer(_msgSender(), amount);
-        order.seller.call{value: amount * order.priceInWeiPerToken}("");
+        order.seller.call{value: (amount * order.priceInWeiPerToken) - comissionAmount}("");
         
 
         if (order.amount == 0) {
